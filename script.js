@@ -1,83 +1,62 @@
-// ROYAL FOOD VILLA - FINAL WORKING - BALAY 24150892008 - SAVES TO LocalStorage
-const FALLBACK_IMG = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400";
-let defaultFoods = [
-{name:"Chicken Biryani",price:280,reviews:120,stars:"★★★★",cat:"Biryani",img:"https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=500"},
-{name:"Beef Biryani",price:320,reviews:95,stars:"★★",cat:"Biryani",img:"https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=500"},
-{name:"Classic Burger",price:220,reviews:210,stars:"★★★",cat:"Chicken",img:"https://images.unsplash.com/photo-1568909344668-6f14a07b56a0?w=500"},
-{name:"Cheese Burger",price:260,reviews:150,stars:"★★★★",cat:"Chicken",img:"https://images.unsplash.com/photo-1568909344668-6f14a07b56a0?w=500"},
-{name:"Fuchka",price:80,reviews:300,stars:"★★★★★",cat:"Street",img:"https://images.pexels.com/photos/5560763/pexels-photo-5560763.jpeg?auto=compress&w=500"},
-{name:"Chotpoti",price:90,reviews:200,stars:"★★★★",cat:"Street",img:"https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=500"}
-];
-let foods = JSON.parse(localStorage.getItem('royal_foods_v8') || 'null') || defaultFoods;
-let cart = JSON.parse(localStorage.getItem('royal_cart') || '[]');
-let orders = JSON.parse(localStorage.getItem('royal_orders') || '[]');
+let foods = JSON.parse(localStorage.getItem('cfv_foods')||'[]');
+let cart = JSON.parse(localStorage.getItem('cfv_cart')||'[]');
 
-function saveAll(){
-localStorage.setItem('royal_foods_v8', JSON.stringify(foods));
-localStorage.setItem('royal_cart', JSON.stringify(cart));
-localStorage.setItem('royal_orders', JSON.stringify(orders));
-updateStats();
+if(foods.length===0){
+ foods=[
+  {id:1,name:"Chicken Biryani",price:280,cat:"Biriyani",img:"images/restaurant.jpg"},
+  {id:2,name:"Special Thali",price:320,cat:"Curry",img:"images/thali.jpg"},
+  {id:3,name:"Chocolate Dessert",price:180,cat:"Dessert",img:"images/dessert.jpg"},
+  {id:4,name:"Chef Special Platter",price:450,cat:"Biriyani",img:"images/chef_plating.jpg"},
+  {id:5,name:"Spice Mix Curry",price:250,cat:"Curry",img:"images/spices.jpg"},
+  {id:6,name:"Mutton Kacchi",price:380,cat:"Biriyani",img:"images/restaurant.jpg"}
+ ];
+ localStorage.setItem('cfv_foods',JSON.stringify(foods));
 }
-function updateStats(){
-let totalOrders = orders.length + 128;
-let revenue = orders.reduce((s,o)=>s+o.total,0) + 24560;
-document.getElementById('statOrders').innerText = totalOrders;
-document.getElementById('statRevenue').innerText = revenue.toLocaleString() + ' BDT';
-document.getElementById('statPending').innerText = orders.length + 7;
-document.getElementById('menuCount').innerText = foods.length + ' Items';
+
+function renderMenu(filter="All"){
+ const list=document.getElementById('menu-list');
+ let filtered = filter==="All"?foods:foods.filter(f=>f.cat===filter);
+ list.innerHTML=filtered.map(f=>`
+  <div class="menu-category">
+    <div class="menu-category-header">${f.cat}</div>
+    <img src="${f.img}" style="width:100%; height:180px; object-fit:cover" onerror="this.src='https://via.placeholder.com/300'">
+    <div style="padding:1.2rem">
+      <b>${f.name}</b><br><span style="color:#b27b38; font-weight:700;">৳${f.price}</span><br>
+      <button onclick="addToCart(${f.id})" style="margin-top:8px; background:#2f2a24; color:#fff; border:0; padding:7px 16px; border-radius:999px; cursor:pointer">Add to Cart</button>
+    </div>
+  </div>
+ `).join('');
 }
-function renderFoods(){
-let term = document.getElementById('searchInput').value.toLowerCase();
-let list = foods.filter(f => f.name.toLowerCase().includes(term));
-document.getElementById('foodGrid').innerHTML = list.slice(0,3).map((f,i)=>{
-let realIdx = foods.indexOf(f);
-return `<div class="food-card"><img src="${f.img}" onerror="this.src='${FALLBACK_IMG}'"><div class="info"><div class="fname">${f.name}</div><div class="stars">${f.stars} (${f.reviews})</div><div class="fprice">${f.price} BDT</div><button class="${realIdx==0?'btn-gold':'btn-outline'}" onclick="addToCart(${realIdx})">+ Add to Cart</button></div></div>`;
-}).join('');
+
+function addToCart(id){
+ let item=foods.find(f=>f.id===id);
+ cart.push(item);
+ localStorage.setItem('cfv_cart',JSON.stringify(cart));
+ updateCart();
+ alert(item.name+" Added & Saved!");
 }
-function renderCart(){
-document.getElementById('cartCount').innerText = cart.reduce((s,x)=>s+x.qty,0);
-let sub = cart.reduce((s,x)=>s+x.price*x.qty,0);
-document.getElementById('subTotal').innerText = sub + ' BDT';
-document.getElementById('totalPrice').innerText = (sub + 60 - 20) + ' BDT';
-document.getElementById('mSub').innerText = sub + ' BDT';
-document.getElementById('mTotal').innerText = (sub + 60 - 20) + ' BDT';
-if(cart.length==0){
-document.getElementById('cartList').innerHTML = '<p style="color:#666;font-size:12px;text-align:center;padding:20px 0">Cart empty - Add from menu<br>Data saves in LocalStorage</p>';
-return;
+
+function updateCart(){
+ document.getElementById('cart-count').innerText=cart.length;
+ let el=document.getElementById('cart-list');
+ if(cart.length===0){ el.innerHTML="<p>Cart empty - Add from menu</p>"; return; }
+ let total=cart.reduce((s,i)=>s+i.price,0);
+ el.innerHTML=cart.map((c,i)=>`<div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eee"><span>${i+1}. ${c.name}</span><span>৳${c.price} <button onclick="removeItem(${i})" style="background:#fee2e2; border:0; padding:2px 6px; border-radius:4px; cursor:pointer">x</button></span></div>`).join('')+
+ `<div style="margin-top:12px; display:flex; justify-content:space-between; font-weight:700"><span>Total</span><span>৳${total}</span></div>
+  <button class="btn btn-gold" style="margin-top:12px; width:100%" onclick="placeOrder()">Place Order</button>`;
 }
-document.getElementById('cartList').innerHTML = cart.map((c,i)=>`<div class="cart-item"><img src="${c.img}" onerror="this.src='${FALLBACK_IMG}'"><div style="flex:1"><div class="c-name">${c.name}</div><div class="c-meta">1 x ${c.price} BDT • Qty ${c.qty}</div></div><div style="text-align:right"><div style="font-size:12px">${c.price*c.qty} BDT</div><button onclick="removeCart(${i})" style="background:none;border:none;color:#777;cursor:pointer;font-size:12px;margin-top:4px">🗑️ Remove</button></div></div>`).join('');
+
+function removeItem(i){ cart.splice(i,1); localStorage.setItem('cfv_cart',JSON.stringify(cart)); updateCart(); }
+function placeOrder(){ if(cart.length===0) return; alert("Order Placed! Total: ৳"+cart.reduce((s,i)=>s+i.price,0)); cart=[]; localStorage.setItem('cfv_cart',JSON.stringify(cart)); updateCart(); }
+function addFood(){
+ let name=document.getElementById('foodName').value.trim();
+ let price=parseInt(document.getElementById('foodPrice').value);
+ let cat=document.getElementById('foodCat').value;
+ if(!name||!price) return alert("Name & Price required");
+ foods.push({id:Date.now(), name, price, cat, img:"images/restaurant.jpg"});
+ localStorage.setItem('cfv_foods',JSON.stringify(foods));
+ renderMenu('All');
+ alert("Food Added & Saved for DCSA Viva!");
 }
-function addToCart(idx){let f = foods[idx];let ex = cart.find(x=>x.name==f.name);if(ex) ex.qty++;else cart.push({name:f.name,price:f.price,img:f.img,qty:1});saveAll(); renderCart();}
-function removeCart(i){ cart.splice(i,1); saveAll(); renderCart(); }
-function clearCart(){ cart=[]; saveAll(); renderCart(); }
-function renderRecent(){
-let demo = [
-{id:'#RFV1028',cust:'Rahim K.',img:'https://i.pravatar.cc/24?img=5',item:'Chicken Biryani',amt:'280 BDT',status:'Pending'},
-{id:'#RFV1027',cust:'Nusrat F.',img:'https://i.pravatar.cc/24?img=6',item:'Beef Biryani',amt:'320 BDT',status:'Completed'},
-{id:'#RFV1026',cust:'Tanvir A.',img:'https://i.pravatar.cc/24?img=7',item:'Classic Burger',amt:'220 BDT',status:'Preparing'}
-];
-let all = [...orders.map(o=>({id:o.orderId,cust:o.customer,item:o.items[0]?.name||'Mixed',amt:o.total+' BDT',status:'Pending'})), ...demo];
-document.getElementById('recentOrders').innerHTML = all.slice(0,6).map(o=>{
-let cls = o.status=='Completed'?'completed':o.status=='Preparing'?'preparing':'pending';
-return `<div class="row-item"><span><b>${o.id}</b></span><span style="display:flex;gap:6px;align-items:center"><img src="${o.img||'https://i.pravatar.cc/24'}" style="width:20px;height:20px;border-radius:50%">${o.cust}</span><span style="color:#888">${o.item}</span><span>${o.amt}</span><span><span class="status ${cls}">● ${o.status}</span></span></div>`;
-}).join('');
-}
-function openCheckout(){if(cart.length==0){alert('Cart empty! Add Chicken Biryani or Burger first');return;}document.getElementById('checkoutModal').classList.add('active');}
-function closeCheckout(){document.getElementById('checkoutModal').classList.remove('active');}
-function confirmOrder(){
-let name=document.getElementById('cName').value.trim();
-let phone=document.getElementById('cPhone').value.trim();
-let addr=document.getElementById('cAddress').value.trim();
-let pay=document.getElementById('cPayment').value;
-if(!name||!phone||!addr){alert('Please fill Name, Phone, Address - Required for Sir to check');return;}
-let sub=cart.reduce((s,x)=>s+x.price*x.qty,0);
-let total=sub+60-20;
-let orderId='ROYAL-'+Math.floor(10000+Math.random()*90000);
-let order={orderId,items:[...cart],subtotal:sub,delivery:60,discount:20,total,customer:name,phone,address:addr,payment:pay,date:new Date().toLocaleString(),status:'Pending'};
-orders.unshift(order);saveAll();closeCheckout();cart=[];saveAll();renderCart();renderRecent();
-document.getElementById('invId').innerText=orderId;document.getElementById('invName').innerText=name;document.getElementById('invPhone').innerText=phone;document.getElementById('invAddr').innerText=addr;document.getElementById('invPay').innerText=pay;document.getElementById('invDate').innerText=order.date;document.getElementById('invItems').innerHTML=order.items.map(it=>`<div><span>${it.name} x ${it.qty}</span><span>${it.price*it.qty} BDT</span></div>`).join('') + `<div><span>Delivery Fee</span><span>60 BDT</span></div><div><span>Discount</span><span>-20 BDT</span></div>`;document.getElementById('invTotal').innerText=total+' BDT';document.getElementById('invoiceModal').classList.add('active');
-}
-function closeInvoice(){document.getElementById('invoiceModal').classList.remove('active');}
-function applyPromo(){let code=document.getElementById('promoInput').value.toUpperCase();let msg=document.getElementById('promoMsg');if(code=='BALAY10'){msg.innerText='✅ BALAY10 Applied! 10% OFF - ID 24150892008';}else if(code==''){msg.innerText='Enter BALAY10';}else{msg.innerText='❌ Invalid! Try BALAY10';}}
-document.getElementById('searchInput').addEventListener('input', renderFoods);
-renderFoods(); renderCart(); renderRecent(); updateStats();
+
+document.addEventListener('DOMContentLoaded',()=>{ renderMenu('All'); updateCart(); });
